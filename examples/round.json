@@ -1,0 +1,10 @@
+{
+  "session_id": "example-only",
+  "batch_id": "example-round-1",
+  "round": 1,
+  "questions": [
+    {"id":"audience","type":"single","title":"首先服务哪些人？","recommendation":"建议先选单一受众，便于验证需求。","options":[{"id":"self","label":"自己使用"},{"id":"team","label":"团队使用"}]},
+    {"id":"outcome","type":"multi","title":"首版必须完成哪些成果？","recommendation":"建议只选验收必需的成果，降低初版成本。","options":[{"id":"plan","label":"计划文档"},{"id":"prototype","label":"可操作原型"},{"id":"tests","label":"验收用例"}]},
+    {"id":"constraints","type":"text","title":"有哪些时间、权限或预算约束？","recommendation":"建议先写硬约束；未知项可以明确写尚不确定。"}
+  ]
+}

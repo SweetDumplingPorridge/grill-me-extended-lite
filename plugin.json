@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "grill-me-extended-lite",
+  "version": "0.1.0",
+  "description": "ChatGPT Chat 中的决策访谈与 GUI 问卷。当前 ChatGPT 生成问题、接收答案、整理计划并自审；问卷使用宿主交互可视化，不运行 MCP 服务。",
+  "author": {"name": "SweetDumplingPorridge", "url": "https://github.com/SweetDumplingPorridge"},
+  "repository": "https://github.com/SweetDumplingPorridge/grill-me-extended-lite",
+  "extensions": {"com.openai": {"interface": {
+    "displayName": "Grill Me Extended Lite",
+    "shortDescription": "对话内的交互问卷与计划自审",
+    "longDescription": "安装为可复用技能后，在当前 Chat 对话发起决策访谈。根据上下文生成单选、多选和补充输入，提交答案后由宿主执行工具调用 Python 离线 runner 校验并保存；JSON 状态可读取、导入、导出和手动修改。交付计划.md、进度.md、AGENTS.md。无需部署服务或模型 API 密钥。依赖账号的资源访问、Python 执行、交互可视化与消息桥；不伪装执行成功或永久存储。",
+    "developerName": "SweetDumplingPorridge", "category": "Productivity", "capabilities": [],
+    "websiteURL": "https://github.com/SweetDumplingPorridge/grill-me-extended-lite",
+    "composerIcon": "./assets/icon.svg", "logo": "./assets/icon.svg",
+    "defaultPrompt": ["拷问我，用交互问卷把这个对话里的想法收敛成计划。", "继续当前访谈，检查未决事项并审核候选计划。"]
+  }}}
+}

@@ -1,0 +1,8 @@
+{
+  "name": "grill-me-extended-lite-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"test:ui": "node --test tests/gui.test.mjs"},
+  "devDependencies": {"playwright": "1.63.0"}
+}

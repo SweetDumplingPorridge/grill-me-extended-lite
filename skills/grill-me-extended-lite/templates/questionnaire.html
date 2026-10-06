@@ -1,0 +1,118 @@
+<section id="grill-lite-root" aria-label="Grill Me 问卷">
+  <p id="grill-lite-round" class="text-small text-muted"></p>
+  <form id="grill-lite-form"><div id="grill-lite-questions"></div>
+    <div class="viz-row"><button id="grill-lite-submit" type="submit" class="btn btn-primary">提交答案并继续访谈</button><button id="grill-lite-copy" type="button" class="btn">复制答案</button></div>
+  </form>
+  <p id="grill-lite-status" role="status" aria-live="polite"></p>
+  <label id="grill-lite-fallback-label" class="form-label" hidden>答案消息（可复制到当前聊天）<textarea id="grill-lite-fallback" class="form-control" rows="4" readonly></textarea></label>
+  <hr>
+  <div class="viz-row"><button id="grill-lite-state" class="btn" type="button">读取状态文本</button><button id="grill-lite-export" class="btn" type="button">导出状态与草稿</button><button id="grill-lite-import" class="btn" type="button">导入文本读档</button></div>
+  <label id="grill-lite-checkpoint-label" class="form-label" hidden>状态 JSON（可复制、修改或粘贴存档）<textarea id="grill-lite-checkpoint" class="form-control" rows="8" maxlength="5000000"></textarea></label>
+  <p id="grill-lite-archive-status" role="status" aria-live="polite"></p>
+</section>
+<style>
+#grill-lite-root {overflow-wrap:anywhere}
+#grill-lite-root [hidden] {display:none!important}
+#grill-lite-root fieldset {min-width:0;border:0;padding:0;margin:0 0 20px}
+#grill-lite-root legend {font-weight:500;margin-bottom:8px}
+#grill-lite-root .grill-recommendation {margin:6px 0 10px}
+#grill-lite-root .grill-other {display:block;margin-top:8px}
+#grill-lite-root .grill-kind {font-weight:400}
+</style>
+<script>
+(() => {
+  const config = __GRILL_CONFIG_JSON__;
+  const root = document.getElementById('grill-lite-root');
+  const form = root.querySelector('form'), questions = root.querySelector('#grill-lite-questions');
+  const status = root.querySelector('#grill-lite-status'), submit = root.querySelector('#grill-lite-submit');
+  const fallback = root.querySelector('#grill-lite-fallback'), fallbackLabel = root.querySelector('#grill-lite-fallback-label');
+  const fields = [], key = [config.session_id, config.batch_id, config.schema_id].join(':');
+  let pending = false, accepted = false, lastPayload = '', submissionId = '', lastMessage = '';
+  function element(tag, text, className) {const e=document.createElement(tag); if(text)e.textContent=text; if(className)e.className=className; return e;}
+  root.querySelector('#grill-lite-round').textContent = `第 ${config.round} 轮 · ${config.questions.length} 个问题`;
+  config.questions.forEach((q, index) => {
+    const box = element('fieldset'), legend = element('legend', `${index+1}. ${q.title}`);
+    legend.append(element('span', `（${{single:'单选',multi:'多选',text:'文本'}[q.type]}）`, 'grill-kind text-small'));
+    box.append(legend, element('p', q.recommendation, 'grill-recommendation text-small text-muted'));
+    const inputs = [];
+    (q.options || []).forEach((option, j) => {
+      const label=element('label', '', 'form-check'), input=element('input');
+      input.type=q.type==='multi'?'checkbox':'radio'; input.className='form-check-input';
+      input.name=`grill-option-${index}`; input.value=option.id; input.id=`grill-option-${index}-${j}`;
+      label.append(input, element('span', option.label, 'form-check-label')); box.append(label); inputs.push(input);
+    });
+    const label=element('label', q.type==='text'?'你的回答（也可写尚不确定）':'其他 / 补充', 'form-label grill-other');
+    const text=element('textarea'); text.className='form-control'; text.rows=2; text.maxLength=1000;
+    label.append(text); box.append(label); questions.append(box); fields.push({q, inputs, text, box});
+  });
+  function answers() {return fields.map(({q,inputs,text})=>({question_id:q.id,selected:inputs.filter(i=>i.checked).map(i=>i.value),text:text.value.trim()}));}
+  function restore(state) {
+    if(pending || accepted || !state || state.key!==key || !Array.isArray(state.answers))return;
+    fields.forEach(({q,inputs,text},index)=>{
+      const a=state.answers[index]; if(!a || a.question_id!==q.id)return;
+      const choices=Array.isArray(a.selected)?a.selected:[];
+      inputs.forEach(i=>{i.checked=choices.includes(i.value);});
+      text.value=typeof a.text==='string'?a.text.slice(0,1000):'';
+    });
+  }
+  async function saveDraft() {
+    const draft={key,answers:answers()}, snapshot={modelContent:null,privateContent:draft};
+    if(new TextEncoder().encode(JSON.stringify(snapshot)).length>=16000){status.textContent='草稿较长；请提交答案或复制到聊天。'; return;}
+    try {if(typeof window.openai?.setWidgetState==='function')await window.openai.setWidgetState(snapshot);} catch {status.textContent='草稿保存未成功；当前输入仍在，可提交或复制。';}
+  }
+  restore(config.draft);
+  restore(window.openai?.widgetState?.privateContent);
+  if(config.state_view){form.hidden=true;root.querySelector('#grill-lite-round').textContent=`访谈状态 · ${config.session_snapshot.session.status} · 第 ${config.round} 轮`;}
+  window.addEventListener('openai:set_globals',e=>restore(e.detail?.globals?.widgetState?.privateContent));
+  form.addEventListener('input',()=>{if(!pending&&!accepted)void saveDraft();});
+  function makeMessage() {
+    const result=answers(), missing=fields.findIndex((f,i)=>!result[i].selected.length&&!result[i].text);
+    if(missing>=0){status.textContent=`请回答第 ${missing+1} 题，或填“尚不确定”。`; fields[missing].text.focus(); return null;}
+    const payload=JSON.stringify(result);
+    if(payload!==lastPayload){submissionId=globalThis.crypto?.randomUUID?.() || `submit-${Date.now()}-${Math.random().toString(36).slice(2)}`;lastPayload=payload;}
+    lastMessage='GRILL_LITE_ANSWERS_V1\n'+JSON.stringify({session_id:config.session_id,batch_id:config.batch_id,schema_id:config.schema_id,submission_id:submissionId,answers:result});
+    fallback.value=lastMessage; return lastMessage;
+  }
+  function expose(message){fallbackLabel.hidden=false; fallback.value=message;}
+  function lock(value){fields.forEach(f=>{f.inputs.forEach(i=>i.disabled=value);f.text.disabled=value;});submit.disabled=value;}
+  form.addEventListener('submit',async e=>{
+    e.preventDefault(); if(pending||accepted)return; const message=makeMessage();if(!message)return;
+    if(typeof window.openai?.sendFollowUpMessage!=='function'){expose(message);status.textContent='此宿主没有提交桥；请复制答案到当前聊天继续。';return;}
+    pending=true;lock(true);status.textContent='提交中，请完成宿主确认（如有）。';
+    try {await window.openai.sendFollowUpMessage({prompt:message,title:'将本轮答案发送到当前聊天'});accepted=true;status.textContent='继续请求已发送；请以聊天中的答案确认为准。';}
+    catch {lock(false);expose(message);status.textContent='提交未确认，答案仍保留。可以重试或复制到当前聊天。';}
+    finally {pending=false;}
+  });
+  root.querySelector('#grill-lite-copy').addEventListener('click',async()=>{
+    const message=accepted?lastMessage:makeMessage();if(!message)return;expose(message);
+    try {if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(message);status.textContent='已复制，请粘贴到当前聊天。';}
+    catch {fallback.focus();fallback.select();status.textContent='请复制下方已选中的答案消息到当前聊天。';}
+  });
+  const checkpoint=root.querySelector('#grill-lite-checkpoint'), checkpointLabel=root.querySelector('#grill-lite-checkpoint-label'), archiveStatus=root.querySelector('#grill-lite-archive-status');
+  function currentSnapshot(){
+    if(!config.session_snapshot)throw Error('本界面未提供 runner 快照，请先在聊天要求导出状态。');
+    const value=JSON.parse(JSON.stringify(config.session_snapshot));
+    if(!config.state_view)value.session.draft={key,answers:answers()};
+    return value;
+  }
+  root.querySelector('#grill-lite-state').addEventListener('click',()=>{
+    try{checkpoint.value=JSON.stringify(currentSnapshot(),null,2);checkpointLabel.hidden=false;archiveStatus.textContent='当前界面所带快照与草稿；如对话已经推进，请在聊天请求最新状态。';}
+    catch(e){archiveStatus.textContent=e.message;}
+  });
+  root.querySelector('#grill-lite-export').addEventListener('click',()=>{
+    try{const text=JSON.stringify(currentSnapshot(),null,2);checkpoint.value=text;checkpointLabel.hidden=false;
+      const url=URL.createObjectURL(new Blob([text],{type:'application/json;charset=utf-8'}));const a=element('a');a.href=url;a.download=`grill-lite-${config.session_id}-r${config.round}.json`;root.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      archiveStatus.textContent='已请求下载；若宿主阻止下载，可复制状态文本。此快照来自本界面，含尚未提交的草稿。';
+    }catch(e){archiveStatus.textContent=e.message;}
+  });
+  let importing=false;
+  root.querySelector('#grill-lite-import').addEventListener('click',async()=>{
+    if(importing)return;if(checkpointLabel.hidden){checkpointLabel.hidden=false;checkpoint.value='';checkpoint.focus();archiveStatus.textContent='粘贴存档 JSON，再按导入；会交给 runner 校验并恢复为新分支。';return;}
+    try{const value=JSON.parse(checkpoint.value);if(value.format!=='grill-me-extended-lite-checkpoint'||value.format_version!==1||!value.session)throw Error('不是有效的 Lite 存档外壳。');
+      const message='GRILL_LITE_IMPORT_V1\n'+JSON.stringify(value);
+      if(typeof window.openai?.sendFollowUpMessage!=='function'){expose(message);archiveStatus.textContent='无提交桥；请把下方导入消息粘贴到聊天，等待 runner 校验。';return;}
+      importing=true;await window.openai.sendFollowUpMessage({prompt:message,title:'导入状态，保留原状态并创建恢复分支'});archiveStatus.textContent='读档请求已发送；以聊天中 runner 校验结果为准。';
+    }catch(e){archiveStatus.textContent=`未确认导入：${e.message}`;}finally{importing=false;}
+  });
+})();
+</script>
