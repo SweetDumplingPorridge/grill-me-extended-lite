@@ -1,45 +1,36 @@
-# Grill Me Extended Lite
+# Grill Me Extended Lite 0.2.0
 
-面向 ChatGPT **Chat 对话**的决策访谈：当前模型采访、生成 GUI 问卷、整理计划并自审。状态机在 ChatGPT 执行环境离线运行，不启动 localhost MCP，不部署服务器。GitHub 用于一次获取、分享和改造。
+在普通 Chat 对话里采访、生成问卷、整理计划并自审。Python 标准库 runner 离线保存权威状态，不部署服务器、不启动 localhost MCP。GitHub 用于一次安装、分享和改造。
 
-## 你要获得的体验
+## 安装与升级
 
-一次创建/安装插件，之后在新 Chat 对话里选择 `@Grill Me Extended Lite`，让它根据当前对话生成单选、多选和补充问卷。点击提交把答案交给同一对话，由离线 runner 校验、保存，再继续采访。最终交付计划.md、进度.md、AGENTS.md。
+下载 [Release](https://github.com/SweetDumplingPorridge/grill-me-extended-lite/releases) 中的最新 ZIP。在 ChatGPT 网页插件页面选择 **添加 → 上传插件压缩包**，上传后按页面提示添加/安装。已装 0.1.0 时，在旧插件的编辑/更新入口上传新版；若账号只提供新增入口，添加新版并确认版本 0.2.0 后选择新版调用。保留自己的存档。
 
-任意阶段都能说“读取状态”“导出存档”“暂停”“导入这个 JSON 继续”。问卷内也有状态读取、导出草稿、粘贴 JSON 读档入口。JSON 可人工编辑；导入创建恢复分支，原档保留。
+之前已实际通过网页 ZIP 上传安装 0.1.0，页面识别技能并显示“在聊天中试用”；GUI 能力当时未通过。0.2.0 的真实网页/Android App Block 验收由用户完成。ZIP 不能给账号添加缺失的执行或组件能力。
 
-## 一次创建和安装
+安装后新建 Chat，选择 `@Grill Me Extended Lite`：
 
-下载 Release 中的 `Grill-Me-Extended-Lite-Setup.md`。在网页 Chat 中选择 **Plugin Creator**，附上安装套件，并发送：
+> 拷问我，用内置 App Block 问卷把这个对话里的想法收敛成计划。
 
-> 请根据附件创建私人插件 Grill Me Extended Lite，将技能、GUI 模板和 Python runner 固定保存为插件资源。我需要在 Chat 模式随时调用，不要创建 MCP 服务、不要要求部署 GitHub。请核验执行工具和 Visualize，创建后帮我做一次 GUI 提交、存档和新聊天读档测试。
+## 交互方式
 
-按 Plugin Creator 的实际提示完成创建与安装，然后开新聊天选择插件。没有 Plugin Creator、资源执行能力或 Visualize 时，这个账号尚不能满足完整目标；不要把普通附件对话当作一次安装成功。此仓库不能自行授予账号能力。
+App Block 优先，不可用时尝试旧 Visualize，再到聊天文本问卷。单选、多选、自由文本；推荐不预选；适配 320px 触屏。当前 **手动回传**：填写 → 生成提交消息 → 全选/复制 → 发送到当前聊天 → runner 校验 → 聊天确认正式记录。没有自动回调依赖。
 
-ZIP 是 Agent Plugins 格式源码/资源包。开发者平台上传会创建草稿并做检查；公开目录还需对应审核发布。GitHub 上传不等于插件全账号可安装。团队可使用自身允许的 GitHub marketplace；个人创建优先用账号提供的 Plugin Creator。
+组件可查看填写、导出/恢复本轮草稿、生成存档读档消息、清空本轮。它不读取最新 runner 状态、不保存完整历史、不访问网络或剪贴板 API。换设备之前请复制草稿，或发给聊天录入后正式导出。
 
-## 条件与当前验证边界
+## 人类友好的完整存档
 
-- 需要当前 Chat 有 Python 执行工具、可访问固定插件资源、交互可视化以及发送继续消息的桥。
-- GUI 不能执行 Python；点击后模型收到消息，再调用 runner。
-- 若桥缺失/失败，答案保留且可复制；不宣称已保存。
-- 沙箱文件不是永久存储；请下载 JSON。widget 草稿恢复不保证跨设备。
-- 网页/手机支持取决于账号与版本；本项目不宣称你的实际安装已验证。
-- 本地 runner 和浏览器模拟验证见 docs/verification.md；真实账号安装与模型行为另需验收。
+任意时刻说“读取状态”“导出最新状态”“暂停并存档”或“导入这份存档继续”。默认得到 **中文 Markdown**：目标、决定、风险、问题、选项、答案、草稿、候选计划、审核理由都是正文；完整机器记录折叠在文末。直接修改正文，列表每项一行，不需要手改 JSON 引号、括号和转义。
 
-## 存档、迁移和手工修改
+格式损坏时 agent **先尝试自动修复并返回修复后文件**，不覆盖原文。能唯一确定的标记、围栏、换行、末尾逗号等修复不额外打扰用户。冲突答案、缺失语义或无法确定字段才询问。修复后仍须 runner 校验，不伪造答案或审核成功。已审核计划的业务内容修改后重新进入审核。
 
-完整状态与历史快照都为 UTF-8 JSON。每次正式操作自动存档；GUI 导出可附未提交草稿。在新聊天附上 JSON，让已安装插件导入并渲染恢复问卷即可。旧界面快照可能较旧，最新状态让模型通过 runner export 获取。
+旧 JSON 存档仍可读写。导入创建新恢复分支，原 state 保留；旧组件不能写入新分支。存档不带签名，历史作为用户提供资料。沙箱文件不是永久存储，请下载保存。
 
-可编辑目标、决定、风险、题目、答案、候选计划与审核记录。格式或状态不一致时导入拒绝，并报告字段；不覆盖原档。存档没有签名，导入历史标为用户提供内容，不能当作独立已验证证据。
+## 分享和开发
 
-## 分享与改造
+资源位于 skills/grill-me-extended-lite/。用户或 agent 可 fork 后修改领域、题目与计划模板，重新打包；每轮根据当前对话生成问题。不要把真实存档提交到公开仓库。
 
-源资源在 skills/grill-me-extended-lite/。其他用户/agent 可 fork，修改技能与领域模板，重新打包、创建自己的插件。每轮问题基于自身对话，示例只是测试数据。不要把真实会话、个人信息或存档提交公开仓库。
-
-原 MCP 版保留在 [grill-me-extended-cloud](https://github.com/SweetDumplingPorridge/grill-me-extended-cloud)，部署与持久化能力另行保留，不依赖本 Lite。
-
-## 开发验证与打包
+原 [MCP 版](https://github.com/SweetDumplingPorridge/grill-me-extended-cloud) 保留，独立于本 Lite。
 
 ```text
 python -m unittest discover -s tests -p "test_*.py" -v
@@ -49,6 +40,6 @@ npm run test:ui
 python scripts/package.py
 ```
 
-Windows 可通过 CHROME_PATH 指向已安装的 Chrome，PYTHON 指向 Python。npm 只用于开发 UI 测试，用户运行 runner 不需 npm。
+npm 仅用于开发测试；runner 仅需 Python 3.10+。Windows 可以通过 CHROME_PATH 指定 Chrome。
 
-官方依据：[对话创建插件](https://learn.chatgpt.com/docs/build-plugins)、[可视化能力](https://learn.chatgpt.com/docs/visualizations)、[插件打包](https://developers.openai.com/plugins/build/plugins)。能力存在仍需在具体账号验证。
+组件实现依据用户提供的 Android App Block 实测交接；官方公开文档暂未确认其通用输出语法，技能要求使用当前宿主实际协议，不发明工具。真实端到端支持需客户端验收。旧 Visualize 参见[官方可视化说明](https://learn.chatgpt.com/docs/visualizations)。

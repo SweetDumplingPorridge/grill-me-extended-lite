@@ -1,0 +1,66 @@
+<section id="grill-app">
+  <h2 id="grill-heading"></h2>
+  <p>在本组件填写后生成消息，复制到当前聊天；聊天确认后才正式记录。未发送的填写内容只保留在本组件。</p>
+  <div id="grill-questions"></div>
+  <div class="grill-actions">
+    <button type="button" id="grill-generate">生成提交消息</button>
+    <button type="button" id="grill-inspect">查看当前填写内容</button>
+    <button type="button" id="grill-export">导出当前草稿</button>
+    <button type="button" id="grill-import">导入草稿 / 存档</button>
+    <button type="button" id="grill-reset">清空本轮填写</button>
+  </div>
+  <p role="status" id="grill-status" aria-live="polite"></p>
+  <label for="grill-copy">可复制文本</label>
+  <textarea id="grill-copy" rows="8" spellcheck="false" placeholder="生成消息后长按全选、复制。也可粘贴草稿或存档。"></textarea>
+  <button type="button" id="grill-select">全选文本</button>
+  <p>完整访谈存档请在聊天中说“导出最新状态”。本组件导出的只是本轮草稿，不包含全部历史。</p>
+</section>
+<style>
+#grill-app{font:16px/1.6 system-ui,sans-serif;max-width:100%;overflow-wrap:anywhere;color:inherit}
+#grill-app *{box-sizing:border-box}#grill-app fieldset{min-width:0;border:1px solid #aaa;border-radius:10px;margin:16px 0;padding:12px}
+#grill-app legend{white-space:normal;max-width:100%;font-weight:600}#grill-app .grill-option{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 0}
+#grill-app input{flex:none;width:20px;height:20px}#grill-app textarea{display:block;width:100%;max-width:100%;font:16px/1.5 system-ui;min-height:88px;padding:10px;border:1px solid #888;border-radius:8px;background:transparent;color:inherit}
+#grill-app button{min-height:44px;padding:8px 12px;font:inherit;white-space:normal;max-width:100%;border:1px solid #888;border-radius:8px;background:transparent;color:inherit}
+#grill-app .grill-actions{display:flex;flex-wrap:wrap;gap:8px}#grill-app [hidden]{display:none!important}
+</style>
+<script>
+(()=>{
+'use strict';
+const config=__GRILL_CONFIG_JSON__;
+const root=document.getElementById('grill-app');const output=root.querySelector('#grill-copy');const status=root.querySelector('#grill-status');
+const controls=new Map();let lastAnswers='',lastId='';
+function el(tag,text){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;}
+root.querySelector('#grill-heading').textContent=config.state_view?'访谈状态入口':`第 ${config.round} 轮`;
+for(const q of config.questions){const f=el('fieldset');f.append(el('legend',q.title));f.append(el('p',`推荐与理由：${q.recommendation}`));const choices=[];
+for(const o of q.options||[]){const label=el('label');label.className='grill-option';const input=el('input');input.type=q.type==='single'?'radio':'checkbox';input.name=`grill-${q.id}`;input.value=o.id;label.append(input,el('span',o.label));f.append(label);choices.push(input);}
+const label=el('label',q.type==='text'?'你的回答':'其他 / 补充');const area=el('textarea');area.maxLength=1000;area.id=`grill-text-${q.id}`;label.htmlFor=area.id;f.append(label,area);root.querySelector('#grill-questions').append(f);controls.set(q.id,{q,choices,area});}
+function answers(){return config.questions.map(q=>{const c=controls.get(q.id);return{question_id:q.id,selected:c.choices.filter(i=>i.checked).map(i=>i.value),text:c.area.value};});}
+function validate(items,partial){if(!Array.isArray(items)||items.length!==config.questions.length)throw Error('草稿问题不完整');const seen=new Set();
+for(const a of items){const c=controls.get(a.question_id);if(!c||seen.has(a.question_id))throw Error('问题重复或不属于本轮');seen.add(a.question_id);if(!Array.isArray(a.selected)||typeof a.text!=='string'||a.text.length>1000)throw Error('答案格式无效');
+if(new Set(a.selected).size!==a.selected.length||a.selected.some(id=>!c.choices.some(i=>i.value===id))||(c.q.type==='single'&&a.selected.length>1))throw Error('选项无效');if(!partial&&!a.selected.length&&!a.text.trim())throw Error(`尚未回答：${c.q.title}`);}}
+function restore(items){validate(items,true);for(const a of items){const c=controls.get(a.question_id);c.choices.forEach(i=>i.checked=a.selected.includes(i.value));c.area.value=a.text;}}
+function identity(value){if(['session_id','batch_id','schema_id'].some(k=>value[k]!==config[k]))throw Error('该草稿属于另一轮问卷，未改变当前填写');}
+function show(text,note){output.value=text;status.textContent=note;}
+function uid(){return typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'?crypto.randomUUID():`submit-${Date.now()}-${Math.random().toString(36).slice(2)}`;}
+function draftText(){const lines=['# Grill Me Lite 草稿','',...['session_id','batch_id','schema_id'].map(k=>`${k}: ${config[k]}`),'','这是组件本地草稿，不是完整访谈存档。'];
+for(const a of answers()){const c=controls.get(a.question_id);lines.push('',`## ${c.q.title}`,`<!-- grill-answer:${a.question_id} -->`,'已选：'+a.selected.map(id=>`${id}（${c.q.options.find(o=>o.id===id).label}）`).join('、'),'回答：',a.text.replace(/&/g,'&amp;').replace(/<!--/g,'&lt;!--'),`<!-- /grill-answer:${a.question_id} -->`);}return lines.join('\n');}
+function parseDraft(text){const d={};for(const k of ['session_id','batch_id','schema_id']){const m=text.match(new RegExp(`^${k}: (.+)$`,'m'));if(!m)throw Error('草稿标识缺失，请交给聊天修复');d[k]=m[1];}identity(d);d.answers=[];
+const expression=/<!-- grill-answer:([^\n]+) -->\n已选：(.*?)\n回答：\n([\s\S]*?)\n<!-- \/grill-answer:\1 -->/g;let m;
+while((m=expression.exec(text))){const c=controls.get(m[1]);if(!c)throw Error('问题不属于本轮');let selected=[];if(m[2]){let remainder=m[2];for(const o of c.q.options||[]){const token=`${o.id}（${o.label}）`;if(remainder.startsWith(token)){selected.push(o.id);remainder=remainder.slice(token.length).replace(/^、/,'');}}
+if(remainder)throw Error('已选选项不明确，请交给聊天修复');}d.answers.push({question_id:m[1],selected,text:m[3].replace(/&lt;!--/g,'<!--').replace(/&amp;/g,'&')});}validate(d.answers,true);return d;}
+root.querySelector('#grill-generate').onclick=()=>{try{const items=answers();validate(items,false);const serialized=JSON.stringify(items);if(serialized!==lastAnswers){lastId=uid();lastAnswers=serialized;}
+show('GRILL_LITE_ANSWERS_V1\n'+JSON.stringify({session_id:config.session_id,batch_id:config.batch_id,schema_id:config.schema_id,submission_id:lastId,answers:items}),'提交消息已生成。请复制完整文本并发送到当前聊天；runner 确认后才正式记录。');}catch(e){status.textContent=e.message;}};
+root.querySelector('#grill-inspect').onclick=()=>show(draftText(),'这是组件当前填写内容，不是 runner 最新状态。');
+root.querySelector('#grill-export').onclick=()=>show(draftText(),'草稿已生成。请手动复制存档；完整访谈存档请在聊天请求导出。');
+root.querySelector('#grill-import').onclick=()=>{try{const text=output.value.trim();if(!text)throw Error('先在文本框粘贴草稿或存档');
+if(text.startsWith('# Grill Me Lite 存档')){show('GRILL_LITE_IMPORT_V1\n'+text,'读档消息已生成。请发送到当前聊天，由 runner 创建新恢复分支。');return;}
+const d=text.startsWith('# Grill Me Lite 草稿')?parseDraft(text):JSON.parse(text);
+if(d.format==='grill-me-extended-lite-checkpoint'){show('GRILL_LITE_IMPORT_V1\n'+text,'读档消息已生成。请发送到当前聊天；本组件没有恢复 runner。');return;}
+if(!text.startsWith('# Grill Me Lite 草稿')&&(d.format!=='grill-lite-app-draft'||d.format_version!==1))throw Error('不支持的草稿类型');identity(d);restore(d.answers);status.textContent='已恢复本组件草稿，尚未发送到聊天。';
+}catch(e){status.textContent=e.message+'。格式错误可把原文本发给聊天，agent 会尝试修复。';}};
+root.querySelector('#grill-reset').onclick=()=>{for(const c of controls.values()){c.choices.forEach(i=>i.checked=false);c.area.value='';}output.value='';status.textContent='已清空本轮填写，runner 状态不变。';};
+root.querySelector('#grill-select').onclick=()=>{output.focus();output.select();status.textContent='请使用系统复制操作，再发送到聊天。';};
+if(config.draft){try{if(config.draft.key!==[config.session_id,config.batch_id,config.schema_id].join(':'))throw Error('草稿标识不匹配');restore(config.draft.answers);}catch(e){status.textContent='未载入草稿：'+e.message;}}
+if(config.state_view){root.querySelector('#grill-generate').hidden=true;root.querySelector('#grill-inspect').hidden=true;root.querySelector('#grill-export').hidden=true;root.querySelector('#grill-reset').hidden=true;status.textContent='当前没有待答问卷。读取或导出最新状态，请直接告诉聊天。';}
+})();
+</script>

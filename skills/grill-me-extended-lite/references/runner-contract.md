@@ -12,7 +12,7 @@
 python <插件资源>/scripts/runner.py <action> --state <当前宿主任务目录>/state.json [--input input.json] [--expected-revision N] [--output output.json或html]
 ```
 
-输入文件是 JSON，命令行不嵌入用户文本。输出为 JSON ok/result 或 ok:false/error；失败退出码为 1。任何报错后 get 读取真实状态，不把失败命令当成功。
+普通操作输入为 JSON；import/repair 同时接受中文 Markdown、文本或旧 JSON 存档，命令行不嵌入用户文本。输出为 JSON ok/result 或 ok:false/error；失败退出码为 1。任何报错后 get 读取真实状态，不把失败命令当成功。
 
 ## 命令与输入
 
@@ -28,9 +28,10 @@ python <插件资源>/scripts/runner.py <action> --state <当前宿主任务目�
 | limit | 到轮次门槛后用户明确 choice continue，或 finish_with_known_risks 加 risks 文本 |
 | pause / resume / cancel | 不需要 input；保留全状态 |
 | draft | `{key,answers}`；允许部分空答案，不计为提交 |
-| export | --output checkpoint.json；可在任意状态执行 |
-| import | --input checkpoint.json；--state 指向新路径，保留原存档，恢复成新 session_id |
-| render | --output questionnaire.html；有问题时问卷＋存档面板，无问题时状态面板 |
+| export | 默认 --output 存档.md；指定 .json 保留旧格式；任意状态可执行 |
+| repair | --input 存档.md --output 新修复文件.md；确定性格式修复、验证并写回新副本，不修改 state |
+| import | --input 存档.md 或 checkpoint.json；--state 指向新路径，保留原存档，恢复成新 session_id |
+| render | --output questionnaire.html 默认 App Block；--renderer visualize 为旧 GUI；无问卷时提供状态操作说明 |
 | materialize | 宿主已实际生成三份文档后才标记 MATERIALIZED；此命令自身不写文档 |
 
 修改动作（init/import 除外）必须带最新 revision；完全相同的答案重试允许旧 revision，不能变更 payload。读写锁已有时退出 BUSY/文件存在错误，不抢占；崩溃残留锁要核实执行已停止后人工处理。
@@ -49,4 +50,4 @@ session 包含 goal、status、revision、round/max_rounds、risk_accepted、cur
 
 手动修改可使用任意文本编辑器。保留外壳和必需字段；题目修改自动重算 schema_id；删除选项时同步调整 draft 或已记录答案，错误会拒绝导入。导入记录为用户提供快照，原审核记录不能被当作独立已验证证据。没有加密或签名；用户可以编辑，不能用于防篡改审计。
 
-GUI 导出来自该界面渲染时的快照，草稿不会被当作已提交答案。用户要最新模型状态时必须 export，不能拿旧 iframe 快照覆盖新状态。
+App Block 导出只含本轮草稿，正式完整存档必须聊天执行 export。旧 Visualize 导出来自该界面渲染时快照，可能过时。草稿不会被当作已提交答案。格式修复与正文修改详见 readable-state.md。

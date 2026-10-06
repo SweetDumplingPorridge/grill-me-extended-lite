@@ -9,6 +9,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from render_round import normalize, render
+import checkpoint_text
 
 STATUSES = {'COLLECTING', 'AWAITING_USER', 'SYNTHESIZING', 'REVIEW_PENDING', 'NEEDS_MORE', 'APPROVED', 'MATERIALIZED', 'PAUSED', 'CANCELLED'}
 RUBRIC = ['consistent_scope', 'decided_tradeoffs', 'implementable_interfaces', 'recovery_permissions', 'executable_acceptance', 'handoff', 'no_undecided_high_impact']
@@ -205,26 +206,46 @@ def persist(path,state):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('action',choices=['init','get','validate','export','import','render','batch','answers','decisions','candidate','review','limit','pause','resume','cancel','draft','materialize'])
+    parser.add_argument('action',choices=['init','get','validate','export','import','repair','render','batch','answers','decisions','candidate','review','limit','pause','resume','cancel','draft','materialize'])
     parser.add_argument('--state',required=True,type=Path)
     parser.add_argument('--input',type=Path)
     parser.add_argument('--output',type=Path)
     parser.add_argument('--expected-revision',type=int)
+    parser.add_argument('--renderer',choices=['app_block','visualize'],default='app_block')
     args=parser.parse_args()
     action=args.action;path=args.state.resolve()
-    data=read(args.input) if args.input else {}
+    repairs=[]
+    if action in {'import','repair'}:
+        if not args.input:raise ValueError('--input required')
+        data,repairs=checkpoint_text.loads(args.input.read_text(encoding='utf-8-sig'))
+    else:data=read(args.input) if args.input else {}
+    if action=='repair':
+        if not args.output:raise ValueError('--output required for repaired copy')
+        if args.output.resolve() in {path,args.input.resolve()} or args.output.exists():raise ValueError('Repair requires a new output path; original is preserved')
+        # Validate on a disposable restored branch; do not create or mutate runner state.
+        restore(data)
+        args.output.parent.mkdir(parents=True,exist_ok=True)
+        args.output.write_text(checkpoint_text.dumps(data),encoding='utf-8')
+        return {'path':str(args.output.resolve()),'repairs':repairs,'note':'Validated repaired copy; not imported'}
     if action in {'get','validate','export','render'}:
         state=validate(read(path))
         if action=='export':
             if not args.output:raise ValueError('--output required')
             if args.output.resolve()==path:raise ValueError('Export cannot overwrite working state')
+            if args.output.suffix.lower() in {'.md','.txt'}:
+                args.output.parent.mkdir(parents=True,exist_ok=True)
+                args.output.write_text(checkpoint_text.dumps(envelope(state)),encoding='utf-8')
+                return {'path':str(args.output.resolve()),'revision':state['revision'],'format':'readable-checkpoint'}
             atomic(args.output,envelope(state));return envelope(state)
         if action=='render':
             if not args.output:raise ValueError('--output required')
             if args.output.resolve()==path:raise ValueError('Render cannot overwrite working state')
             config=dict(state['current_batch'] or dict(session_id=state['session_id'],round=state['round'],state_view=True),session_snapshot=envelope(state),draft=state['draft'])
-            args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(render(config),encoding='utf-8')
-            return {'path':str(args.output.resolve()),'revision':state['revision']}
+            if args.renderer=='app_block':
+                from render_app_block import render as renderer
+            else:renderer=render
+            args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(renderer(config),encoding='utf-8')
+            return {'path':str(args.output.resolve()),'revision':state['revision'],'renderer':args.renderer,'manual_callback':args.renderer=='app_block'}
         return state
     path.parent.mkdir(parents=True,exist_ok=True)
     lock=path.with_name(path.name+'.lock')
