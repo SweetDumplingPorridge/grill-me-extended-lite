@@ -1,5 +1,11 @@
 # 0.2.0 验证边界
 
+## 0.2.1 修复范围
+
+根据用户新交接：Android 同一会话已成功渲染 Direct Mode App Block；失败发生在 ALL_TOOLS 检索结果被误作能力判据，状态初始化、get、Markdown export、repair/import 正常。新版只修改技能/协议/说明与版本信息，不修改 runner 或组件实现。明确 Direct Mode metadata 优先、不得仅根据工具列表 fallback、使用实际 content reference contract、遵守禁用 genui_run、重绘保留现有业务身份与分支。
+
+遵循用户由其人工验收、避免等待/阻塞的安排，不运行新测试或浏览器验收，提交跳过 CI。Direct Mode 真实首轮行为未由本端验证。交接中的 content reference 示例为空，未补造语法；实际输出以当前宿主正式协议为准。A–H 回归清单列在 app-block-contract.md。
+
 Windows Python 离线 runner/存档测试：20 项通过。Chrome 浏览器组件与旧 Visualize 测试：8 项通过。
 
 覆盖：320/390/1280 无横向溢出、三题型无预选、手动答案消息、重复消息 ID 不变、修改答案 ID 改变、空回答拒绝、本地草稿恢复、跨批次草稿拒绝且不丢原填写、存档生成手动导入消息、无网络/剪贴板/外部存储 API、恶意题目安全序列化。

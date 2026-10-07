@@ -1,10 +1,12 @@
-# Grill Me Extended Lite 0.2.0
+# Grill Me Extended Lite 0.2.1
+
+0.2.1 修复能力发现规则：GenUI Direct Mode 的 app_block 可能只出现在宿主 widget metadata，不在 ALL_TOOLS。优先读取 Direct Mode contract 并直接输出其 GenUI content reference；禁止用普通工具列表缺失判定不可用，遵守不得 genui_run 的宿主要求。恢复/重绘既有问卷不重新 init 或 batch，不改变状态。runner、存档格式和组件代码保持 0.2.0。
 
 在普通 Chat 对话里采访、生成问卷、整理计划并自审。Python 标准库 runner 离线保存权威状态，不部署服务器、不启动 localhost MCP。GitHub 用于一次安装、分享和改造。
 
 ## 安装与升级
 
-下载 [Release](https://github.com/SweetDumplingPorridge/grill-me-extended-lite/releases) 中的最新 ZIP。在 ChatGPT 网页插件页面选择 **添加 → 上传插件压缩包**，上传后按页面提示添加/安装。已装 0.1.0 时，在旧插件的编辑/更新入口上传新版；若账号只提供新增入口，添加新版并确认版本 0.2.0 后选择新版调用。保留自己的存档。
+下载 [Release](https://github.com/SweetDumplingPorridge/grill-me-extended-lite/releases) 中的最新 ZIP。在 ChatGPT 网页插件页面选择 **添加 → 上传插件压缩包**，上传后按页面提示添加/安装。已装旧版本时，在旧插件的编辑/更新入口上传新版；若账号只提供新增入口，添加新版并确认版本 0.2.1 后选择新版调用。保留自己的存档。
 
 之前已实际通过网页 ZIP 上传安装 0.1.0，页面识别技能并显示“在聊天中试用”；GUI 能力当时未通过。0.2.0 的真实网页/Android App Block 验收由用户完成。ZIP 不能给账号添加缺失的执行或组件能力。
 

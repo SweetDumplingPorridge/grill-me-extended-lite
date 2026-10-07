@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "grill-me-extended-lite",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "ChatGPT Chat 决策访谈，App Block 内置问卷与手动回传，离线 runner、人类可编辑 Markdown 存档和格式修复。",
   "author": {
     "name": "SweetDumplingPorridge",

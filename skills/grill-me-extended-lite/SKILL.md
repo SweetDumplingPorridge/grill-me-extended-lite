@@ -9,6 +9,10 @@ description: 当用户明确要求拷问我、grill me 或 Grill Me Extended Lit
 
 ## 宿主能力与第一次使用
 
+**硬规则：GenUI Direct Mode widget 不是普通 function/MCP tool。不得通过 ALL_TOOLS、MCP tool discovery 或 functions tool discovery 中没有 app_block 来判断 App Block 不存在。** 先检查当前上下文中宿主正式提供的 GenUI/widget capability metadata，包括 genui_search_tool_results → direct_mode → direct_mode_tools。若其中声明 app_block，必须视为可用并选择 Direct Mode App Block；普通工具列表不影响这一判断。读取其当前 invocation contract，并直接使用该协议要求的 GenUI content reference 输出组件。若该 contract 明确要求 MUST NOT use genui_run，禁止使用 genui_run；也不得用 functions.exec 调用一个假设存在的 app_block 函数。不要发明或照抄未提供的输出标记。
+
+能力发现顺序：GenUI Direct Mode App Block → 其他正式 App Block surface → Visualize → 聊天文本。只有宿主正式能力信息确认 App Block 各入口均不可用后才能进入 Visualize；仅在 App Block 与 Visualize 都确认不可用时才降为文本。未获得 metadata/contract 是“尚未确认”，不是“不支持”：继续读取宿主正式能力说明；如果仍无法获取，说明确认不了的具体能力，不能凭普通工具列表编造不可用结论。对话中已成功使用同一 App Block surface 是可用证据，应沿用其已确认协议。
+
 优先使用宿主内置 App Block，读取 [App Block 协议](references/app-block-contract.md)。runner render 默认产生 App Block HTML 片段，使用当前宿主实际提供的 App Block 输出能力展示，不能发明工具或输出标记。默认采用手动回传：组件生成文本，用户复制发送到同一聊天，不要求自动消息桥。固定模板或脚本不可执行时，根据同一协议在宿主允许的环境生成片段；不能假定用户本机路径存在。
 
 有目标直接开始；目标未知先确认。App Block 不可用时尝试 runner render --renderer visualize，读取 [旧 GUI 协议](references/gui-contract.md) 并遵循宿主 Visualize 的实际输出说明。两者都不可用时明确告知并使用聊天文本 renderer。不可把 HTML 代码块、下载文件或截图说成对话内可交互 GUI。不要为此要求部署仓库。
@@ -18,6 +22,8 @@ description: 当用户明确要求拷问我、grill me 或 Grill Me Extended Lit
 runner 的 state.json 是结构化状态的权威；当前对话提供上下文和用户授权。先读 [runner 与存档协议](references/runner-contract.md) 和 [人类存档及修复](references/readable-state.md)。开始时在宿主持久于当前任务的可写目录创建 state.json；恢复时导入用户的 Markdown、文本或旧 JSON 存档到新文件。不要使用本机 Windows 路径，不要启动服务。
 
 每次操作通过 runner 的命令执行；每个修改使用最新 expected-revision。每次成功修改自动保留历史快照。GUI 消息收到后先运行 answers/import 等命令，只有 runner 成功才确认“已记录/已导入”。每轮使用 runner render 生成片段，App Block 只带当前问题与草稿，不能冒充最新完整状态。
+
+若先前因错误能力探测降级，或用户要求重新显示当前问卷：runner get 读取现有活动 state（导入过则继续新分支），随后 render 现有 current_batch 并用已确认 App Block 协议展示。不得重新 init/batch，不得增加 round/revision，不改变 session_id/batch_id/schema_id，不自动提交。若 current_batch 为空，按现有状态继续流程，不伪造已失效问卷。仅创建真正的新业务轮次时才执行 batch。
 
 1. 按当前对话内容生成每轮 3–7 个高影响问题，只剩少量阻塞项时不凑数。每题用稳定 ID、single/multi/text 类型、建议与理由；支持其他/补充。建议不预选、不视为同意。
 2. 为每轮生成新的 batch_id；同一轮重试保持标识和题目一致。用 GUI 呈现，不同时在聊天复制一整轮问题。问题与选项来自本次对话，不能固定套用示例。响应式界面支持 320px、键盘和触屏。
